@@ -1,0 +1,7 @@
+token.json
+composer.lock
+credentials.json
+/.vscode
+/docs
+/src
+/vendor
