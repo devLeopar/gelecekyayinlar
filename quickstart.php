@@ -69,8 +69,8 @@ $service = new Google_Service_Drive($client);
 $folderName = "scheduling"; // Please set the folder name here.
 $optParams = array(
   'pageSize' => 10,
-  'fields' => 'nextPageToken, files',
-  'q' => "name = '".$folderName."' and mimeType = 'application/vnd.google-apps.folder'"
+  'fields' => 'nextPageToken, files(id, name)',
+  'q' => "mimeType = 'application/vnd.google-apps.spreadsheet'"
 );
 $results = $service->files->listFiles($optParams);
 
