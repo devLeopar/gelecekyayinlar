@@ -62,7 +62,7 @@ $service = new Google_Service_Drive($client);
 //$folderName = "scheduling"; // Please set the folder name here.
 //$folderId = "0B49-5XKwF3IJWG8yNHFhWWc4a00"; //scheduling folder Id
 
-
+//getting desired file list from response - istenilen dosyaları drive response'dan çek
 $optParams = array(
   'pageSize' => 20,
  // 'fields' => 'nextPageToken, files(*)', // tüm parametrelerini çağır / get all parameters of files,folders specified in search term
@@ -71,6 +71,8 @@ $optParams = array(
 );
 
 $results = $service->files->listFiles($optParams);
+
+
 if (count($results->getFiles()) == 0) {
     print "No files found.\n";
 } else {
