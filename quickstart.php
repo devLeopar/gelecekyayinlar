@@ -1,9 +1,12 @@
 <?php
 require __DIR__ . '/vendor/autoload.php';
+
 /*if (php_sapi_name() != 'cli') {
     throw new Exception('This application must be run on the command line.');
 }*/
+
 /* Above lines is required to make token.json via using cli - CLI kullanarak drive'a giriş yapılıp token.json oluşturulması için öncelikle CLI ile çağrılsın*/
+
 /**
  * Returns an authorized API client.
  * @return Google_Client the authorized client object
@@ -60,11 +63,11 @@ $service = new Google_Service_Drive($client);
 
 /* Those informations should be used in search query to point out spesific folder - Aşağıdaki terimler search query'de folder içini belirtmek için kullanılabilir */
 //$folderName = "scheduling"; // Please set the folder name here.
-//$folderId = "0B49-5XKwF3IJWG8yNHFhWWc4a00"; //scheduling folder Id
+
 
 //getting desired file list from response - istenilen dosyaları drive response'dan çek
 $optParams = array(
-  'pageSize' => 20,
+  'pageSize' => 500,
  // 'fields' => 'nextPageToken, files(*)', // tüm parametrelerini çağır / get all parameters of files,folders specified in search term
   'fields' => 'nextPageToken, files(id,name,createdTime)',
   'q' => "mimeType = 'application/vnd.google-apps.spreadsheet'" // only call excel spreadsheets - sadece excel sheetleri döndür
@@ -72,12 +75,21 @@ $optParams = array(
 
 $results = $service->files->listFiles($optParams);
 
+$uevents = [];
 
 if (count($results->getFiles()) == 0) {
     print "No files found.\n";
 } else {
     print "Files:\n";
     foreach ($results->getFiles() as $file) {
-        printf("%s (%s) %s\n", $file->getName(), $file->getId(),$file->getCreatedTime());
+        //printf("%s (%s) %s\n", $file->getName(), $file->getId(),$file->getCreatedTime()); //delete after use it
+        $fname = $file->getName();
+        $fid = $file->getId();
+        $fCreatedTime = $file->getCreatedTime();
+
+        if(stripos($fname,"weekly")>0 && stripos($fname,"sport")>0){
+            array_push($uevents,["ev_name"=>$fname,"ev_id"=>$fid,"ev_createdTime"=>$fCreatedTime]);
+        }
     }
+    echo "finishe"; //should deleted
 }
