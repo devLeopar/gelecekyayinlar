@@ -80,7 +80,6 @@ $uevents = [];
 if (count($results->getFiles()) == 0) {
     print "No files found.\n";
 } else {
-    print "Files:\n";
     foreach ($results->getFiles() as $file) {
         //printf("%s (%s) %s\n", $file->getName(), $file->getId(),$file->getCreatedTime()); //delete after use it
         $fname = $file->getName();
