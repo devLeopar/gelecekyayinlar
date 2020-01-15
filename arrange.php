@@ -24,10 +24,12 @@ function getTrDate($date){
     return $split[0]." ".$months[$split[1]]." ".$split[2];
 }
 
-$james_dum = $uevents[0]['ev_id']; //should delete
+$james_dum = "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=".$uevents[10]['ev_id']."&exportFormat=xlsx"; //should delete
+//"https://docs.google.com/spreadsheets/d/".$uevents[0]["ev_id"]."/edit#gid=0" //getting new file
+//'https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=.$uevents[10]["ev_id"].&exportFormat=xlsx';
 
 //$textString = file_get_contents("https://docs.google.com/spreadsheets/d/e/2PACX-1vR0nPvH3DckCCKtVy605uRIrtSIskGfEeCoa3GzWTDhxozeXtyjCM20JRPKKmXtydhoXNhQ-MHiA6nS/pubhtml?gid=0&single=true");
-$textString = file_get_contents("https://docs.google.com/spreadsheets/d/e/2PACX-".$uevents[0]['ev_id']."/pubhtml?gid=0&single=true");
+$textString = file_get_contents("https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=".$uevents[10]['ev_id']."&exportFormat=xlsx");
 
 $dom = new Dom;
 //$dom->setOptions(["removeStyles" => true]);
@@ -60,9 +62,9 @@ for($i = 3; $i < $count; $i++){
 ";
     }
 }
-$xmlString .= "</list>";
+/*$xmlString .= "</list>";
 $f = fopen("list.xml","w");
 fputs($f, $xmlString);
-fclose($f);
+fclose($f);*/
 
 ?>
