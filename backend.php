@@ -61,9 +61,6 @@ $client = getClient();
 $service = new Google_Service_Drive($client);
 /* Above 2 lines indicates successful data from the object formed with google client api */
 
-/* Those informations should be used in search query to point out spesific folder - Aşağıdaki terimler search query'de folder içini belirtmek için kullanılabilir */
-//$folderName = "scheduling"; // Please set the folder name here.
-
 
 //getting desired file list from response - istenilen dosyaları drive response'dan çek
 $optParams = array(
@@ -100,44 +97,122 @@ usort($uevents,function($a,$b){return $b['ev_createdTime']<=>$a['ev_createdTime'
 }
 
 
-// getting values from spreadsheets into an array for front-end usage
+
+
+function getDataFromSheet($ids,$ssheet):array{
+
+    $files =[];
+    $rqFields = [];
+
+
+//getting only row values formatted value and effective value because of speed//////////////////////////////////////////////
+$range = 'A2:I'; //the range until image row
+$sheet_fields = array(
+    'fields'=> 'properties(title),sheets(data(rowData(values(formattedValue,effectiveFormat(textFormat)))))',
+    'ranges' => $range,
+);
+
+    foreach($ids as $id){
+        $sata = $ssheet->spreadsheets->get($id,$sheet_fields);
+        array_push($files,array(
+            'sheet_title' => $sata['properties']['title'],
+            'sheet_data' => $sata['sheets'][0]['data'][0]['rowData'],
+        ));
+        //array_push($files,$sata);
+    }
+$datasheets = array(
+ $files[0]['sheet_data'], //last created sheet
+ $files[1]['sheet_data'],  // previous week sheet
+);
+////////////////////////////////üst bölümü fonksiyon dışına çıkarabilirim bazen takılmalar oluyor sebepsiz///////////////////////////////////
+
+for($i = 0; $i < count($datasheets); $i++){
+    foreach($datasheets[$i] as $row){
+        //check image url string has correct form
+        $image_url = $row['values'][8]['formattedValue'];
+            if(isset($image_url) && strpos($image_url,'?id=') !== false ){
+                $image_id = explode('?id=',$image_url)[1];
+                $evNameTr = $row['values'][2]['formattedValue'];
+                $dateDMY =  $row['values'][0]['formattedValue'];
+                $dateClock = $row['values'][5]['formattedValue'];
+                $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours');
+
+                // continue weekend this date thing
+
+                echo 'test';
+
+            }
+
+
+
+
+       /*$image_id_url = isset($row['values'][8]['formattedValue'])?$row['values'][8]['formattedValue']:"";
+            if(strpos($image_id_url,'id=')>0){
+                $image_id_url_ex = explode('id=',$image_id_url);
+            }
+            else{
+                $image_id_url_ex = "";
+            }
+        
+        $image_id = isset($image_id_url_ex[1])?$image_id_url_ex[1]:"";
+        $datas = array(
+        'date' => $row['values'][0]['formattedValue'],
+        'evNameTr' => $row['values'][2]['formattedValue'],
+        'startTime' => $row['values'][5]['formattedValue'],
+        'image_id' => $image_id,
+        );
+        array_push($rqFields,$datas);*/
+    
+}
+}
+
+
+ return $files;
+
+}
+
+/**
+ * getting values from spreadsheets into an array for front-end usage
+*/ 
 
 $sheets = new \Google_Service_Sheets($client);
 
-$data = [];
+//$spreadsheet = $sheets->spreadsheets->get($spreadsheetId,$sheet_fields);
+//last created 2 spreadsheet ids
+$m_ids = array($uevents[9]['ev_id'],$uevents[10]['ev_id']);
+$data = getDataFromSheet($m_ids,$sheets);
 
-// The first row contains the column titles, so lets start pulling data from row 2
-$currentRow = 2;
 
-// The range of A2:P will get columns A through P and all rows starting from row 2
-//$spreadsheetId = getenv($uevents[10]['ev_id']);
+
+
 $spreadsheetId = $uevents[10]['ev_id'];
-$range = 'A2:P';
+
+
 /*
-* getting spreadsheet style - buna bakıcam
+* getting spreadsheets value and textFormat
 */
-//getting only row values formatted value and effective value because of speed
-$sheet_fields = array('fields'=> 'properties(title),sheets(data(rowData(values(formattedValue,effectiveFormat(textFormat)))))');
+
+
 //$spreadsheet = $sheets->spreadsheets->get($spreadsheetId,['includeGridData' => true]); //return all parameters
-$spreadsheet = $sheets->spreadsheets->get($spreadsheetId,$sheet_fields);
+
 $grid = $spreadsheet->getSheets();
-$james = $grid[0]['data'][0]['rowData'];
 
 
 
-$rows = $sheets->spreadsheets_values->get($spreadsheetId, $range, ['majorDimension' => 'ROWS']);
+
+/*$rows = $sheets->spreadsheets_values->get($spreadsheetId, $range, ['majorDimension' => 'ROWS']);
 if (isset($rows['values'])) {
     foreach ($rows['values'] as $row) {
         /*
          * If first column is empty, consider it an empty row and skip (this is just for example)
          */
-        if (empty($row[0])) {
+        /*if (empty($row[0])) {
             continue;
         }
         /**
          * Data array içine tüm değerleri al önemli olan set edilmemişse null döndürme 
          */
-        $data[] = [
+        /*$data[] = [
             'col-a' => isset($row[0])?$row[0]:"",
             'col-b' => isset($row[1])?$row[1]:"",
             'col-c' => isset($row[2])?$row[2]:"",
@@ -147,7 +222,7 @@ if (isset($rows['values'])) {
             'col-g' => isset($row[6])?$row[6]:"",
             'col-h' => isset($row[7])?$row[7]:"",
             'col-i' => isset($row[8])?$row[8]:"",
-        ];
+        ];*/
 
         /*
          * Now for each row we've seen, lets update the I column with the current date
@@ -165,7 +240,9 @@ if (isset($rows['values'])) {
             ['valueInputOption' => 'USER_ENTERED']
         );
 
-        $currentRow++;*/
+        $currentRow++;
     }
-    echo "finishe"; //should deleted
-}
+    
+}*/
+
+echo "finishe"; //should deleted
