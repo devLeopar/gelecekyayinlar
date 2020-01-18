@@ -83,26 +83,35 @@ if (count($results->getFiles()) == 0) {
         $fname = $file->getName();
         $fid = $file->getId();
         $fCreatedTime = $file->getCreatedTime();
-
+        //get only Ssport Weekly spreadsheets on google drive
         if(stripos($fname,"weekly")>0 && stripos($fname,"sport")>0){
-            array_push($uevents,["ev_name"=>$fname,"ev_id"=>$fid,"ev_createdTime"=>$fCreatedTime]);
+            array_push($uevents,["file_name"=>$fname,"file_id"=>$fid,"file_createdTime"=>$fCreatedTime]);
         }
     }
 
 //sorting uevents as creation time of spreadsheets new first using spaceshift which is above php 7.xx
 // - uevents excelleri üretilen zamana göre sırala en son en başta ayrıca spaceshift karakteri(<=>) için php 7 ve üzeri olması gerek
 
-usort($uevents,function($a,$b){return $b['ev_createdTime']<=>$a['ev_createdTime'];});
+usort($uevents,function($a,$b){return $b['file_createdTime']<=>$a['file_createdTime'];});
     
 }
 
 
-
-
+/**
+ * Get data from multiple spreadsheets on google drive
+ * @return rqFields as required fileds Event Title,Event Data and Image Id
+ */
 function getDataFromSheet($ids,$ssheet):array{
 
-    $files =[];
     $rqFields = [];
+    $dateEn =['January','February','March','April','May','June','July','August','September','October','November','December',
+               'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    $dateTr =['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık',
+               'Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar']; 
+               
+    $now = strtotime('now');
+    $datasheets = [];
+
 
 
 //getting only row values formatted value and effective value because of speed//////////////////////////////////////////////
@@ -112,62 +121,60 @@ $sheet_fields = array(
     'ranges' => $range,
 );
 
+
+/**
+ * Getting https calls from google drive api for multiple sheets
+ */
     foreach($ids as $id){
         $sata = $ssheet->spreadsheets->get($id,$sheet_fields);
-        array_push($files,array(
+        $files = array(
             'sheet_title' => $sata['properties']['title'],
             'sheet_data' => $sata['sheets'][0]['data'][0]['rowData'],
-        ));
-        //array_push($files,$sata);
+        );
+
+        array_push($datasheets,$files['sheet_data']);
+
     }
-$datasheets = array(
- $files[0]['sheet_data'], //last created sheet
- $files[1]['sheet_data'],  // previous week sheet
-);
+
 ////////////////////////////////üst bölümü fonksiyon dışına çıkarabilirim bazen takılmalar oluyor sebepsiz///////////////////////////////////
 
 for($i = 0; $i < count($datasheets); $i++){
     foreach($datasheets[$i] as $row){
         //check image url string has correct form
-        $image_url = $row['values'][8]['formattedValue'];
+        $image_url = $row['values'][8]['formattedValue']; //bu line'ı hiç resim yok ama diğer satırlar varsa hata veriyor bakıcam
             if(isset($image_url) && strpos($image_url,'?id=') !== false ){
                 $image_id = explode('?id=',$image_url)[1];
                 $evNameTr = $row['values'][2]['formattedValue'];
                 $dateDMY =  $row['values'][0]['formattedValue'];
                 $dateClock = $row['values'][5]['formattedValue'];
-                $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours');
+                $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours'); //adding +3 hours to be GMT+3
+                $excDateEn = date("d F l - H:i",$date_dum);
+                $exDateTr = str_replace($dateEn,$dateTr,$excDateEn);
+                //getting if event cancelled or not by looking strikethrough property set by Melida 
+                $strike = $row['values'][0]['effectiveFormat']['textFormat']['strikethrough'] || $row['values'][3]['effectiveFormat']['textFormat']['strikethrough'];
 
-                // continue weekend this date thing
-
-                echo 'test';
+                //check if events' time passed or not 
+                if($date_dum>=$now){
+                    if(!$strike){
+                        $datas = array(
+                            'evNameTr' => $evNameTr,
+                            'date' => $exDateTr,
+                            'imageId' => $image_id,
+                        );
+                        //add required fields to the array
+                        array_push($rqFields,$datas);
+                    }
+                }
 
             }
 
-
-
-
-       /*$image_id_url = isset($row['values'][8]['formattedValue'])?$row['values'][8]['formattedValue']:"";
-            if(strpos($image_id_url,'id=')>0){
-                $image_id_url_ex = explode('id=',$image_id_url);
-            }
-            else{
-                $image_id_url_ex = "";
-            }
-        
-        $image_id = isset($image_id_url_ex[1])?$image_id_url_ex[1]:"";
-        $datas = array(
-        'date' => $row['values'][0]['formattedValue'],
-        'evNameTr' => $row['values'][2]['formattedValue'],
-        'startTime' => $row['values'][5]['formattedValue'],
-        'image_id' => $image_id,
-        );
-        array_push($rqFields,$datas);*/
-    
+            
+              
 }
 }
 
 
- return $files;
+ return $rqFields;
 
 }
 
@@ -177,72 +184,14 @@ for($i = 0; $i < count($datasheets); $i++){
 
 $sheets = new \Google_Service_Sheets($client);
 
-//$spreadsheet = $sheets->spreadsheets->get($spreadsheetId,$sheet_fields);
-//last created 2 spreadsheet ids
-$m_ids = array($uevents[9]['ev_id'],$uevents[10]['ev_id']);
+
+//last created 2 spreadsheet ids - to sort them into correct order put previous and next (düzgün dizmek için önceki tarihte olanı başa al $uevents[1]['ev_id'] )
+// Buraya sadece 2 file seçmek için file isimlerinden haftaya dayalı seçim yapan fonksiyon yazabilirim
+$m_ids = array($uevents[2]['file_id'],$uevents[1]['file_id'],$uevents[0]['file_id']);
 $data = getDataFromSheet($m_ids,$sheets);
 
 
 
 
-$spreadsheetId = $uevents[10]['ev_id'];
-
-
-/*
-* getting spreadsheets value and textFormat
-*/
-
-
-//$spreadsheet = $sheets->spreadsheets->get($spreadsheetId,['includeGridData' => true]); //return all parameters
-
-$grid = $spreadsheet->getSheets();
-
-
-
-
-/*$rows = $sheets->spreadsheets_values->get($spreadsheetId, $range, ['majorDimension' => 'ROWS']);
-if (isset($rows['values'])) {
-    foreach ($rows['values'] as $row) {
-        /*
-         * If first column is empty, consider it an empty row and skip (this is just for example)
-         */
-        /*if (empty($row[0])) {
-            continue;
-        }
-        /**
-         * Data array içine tüm değerleri al önemli olan set edilmemişse null döndürme 
-         */
-        /*$data[] = [
-            'col-a' => isset($row[0])?$row[0]:"",
-            'col-b' => isset($row[1])?$row[1]:"",
-            'col-c' => isset($row[2])?$row[2]:"",
-            'col-d' => isset($row[3])?$row[3]:"",
-            'col-e' => isset($row[4])?$row[4]:"",
-            'col-f' => isset($row[5])?$row[5]:"",
-            'col-g' => isset($row[6])?$row[6]:"",
-            'col-h' => isset($row[7])?$row[7]:"",
-            'col-i' => isset($row[8])?$row[8]:"",
-        ];*/
-
-        /*
-         * Now for each row we've seen, lets update the I column with the current date
-         */
-        /*$updateRange = 'I'.$currentRow;
-        $updateBody = new \Google_Service_Sheets_ValueRange([
-            'range' => $updateRange,
-            'majorDimension' => 'ROWS',
-            'values' => ['values' => date('c')],
-        ]);
-        $sheets->spreadsheets_values->update(
-            $spreadsheetId,
-            $updateRange,
-            $updateBody,
-            ['valueInputOption' => 'USER_ENTERED']
-        );
-
-        $currentRow++;
-    }
-    
-}*/
 
 echo "finishe"; //should deleted
