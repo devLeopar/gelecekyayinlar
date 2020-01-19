@@ -1,0 +1,37 @@
+*{
+    box-sizing:border-box;
+}
+body{
+    background-color:black;
+}
+.plus-carousel-container{
+    display:flex;
+    justify-content: center;
+}
+.plus-title{
+    color:white;
+}
+.plus-date{
+    color:white;
+}
+.plus-carousel{
+    height:100%;
+    width:80%;
+}
+.carousel-container{
+    height:100%;
+}
+.slick-slide {
+    margin: 0px 20px;
+  }
+
+.slick-slide img {
+    width: 100%;
+  }
+  .slick-dots li button::before {
+      color:white;
+  }
+  .slick-dots li.slick-active button::before {
+    opacity: 0.75;
+    color: white;
+}

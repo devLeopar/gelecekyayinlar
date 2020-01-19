@@ -1,70 +1,86 @@
-<?php
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!-- Add the slick-theme.css if you want default styling -->
+    <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+    <!-- Add the slick-theme.css if you want default styling -->
+    <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/>
+    <link rel="stylesheet" type="text/css" href="main.css"/>
+    <!-- Latest compiled and minified CSS -->
+    <!-- <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous"> -->
+    <title>Plus Canlı Yayınlar</title>
+</head>
+<body>
 
-require 'backend.php';
-/*require __DIR__.'/htmlparser/vendor/autoload.php';  //gerek yok google api ile halledilecek
-use PHPHtmlParser\Dom;*/
+<div class="plus-carousel-container">
+    <div class="plus-carousel">
+    <?php 
+    require 'backend.php';
+    $carousel = "";
 
-$months = [
-    "January" => "Ocak",
-    "February" => "Şubat",
-    "March" => "Mart",
-    "April" => "Nisan",
-    "May " => "Mayıs",
-    "June" => "Haziran",
-    "July" => "Temmuz",
-    "August" => "Ağustos",
-    "September" => "Eylül",
-    "October" => "Ekim",
-    "November" => "Kasım",
-    "December" => "Aralık",
-];
-function getTrDate($date){
-    global $months;
-    $split = explode(" ", $date);
-    return $split[0]." ".$months[$split[1]]." ".$split[2];
+    foreach($data as $item){
+    $carousel .= <<< EX
+            <div class="carousel-container">
+                <a class="plus-image-link" href="#"><img class="plus-image" src="https://lh3.googleusercontent.com/d/{$item['imageId']}=s350?authuser=0"></a>
+                <h3 class="plus-title">{$item['evNameTr']}</h3>
+                <p class="plus-date">{$item['date']}</p>
+            </div>
+EX;
+        
 }
+    echo $carousel;
+    ?>
+            
+        </div>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>     
+<script type="text/javascript" src="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+  
 
-$james_dum = "https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=".$uevents[10]['ev_id']."&exportFormat=xlsx"; //should delete
-//"https://docs.google.com/spreadsheets/d/".$uevents[0]["ev_id"]."/edit#gid=0" //getting new file
-//'https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=.$uevents[10]["ev_id"].&exportFormat=xlsx';
+<script type="text/javascript">
+    //$(document).on('ready', function() {
 
-//$textString = file_get_contents("https://docs.google.com/spreadsheets/d/e/2PACX-1vR0nPvH3DckCCKtVy605uRIrtSIskGfEeCoa3GzWTDhxozeXtyjCM20JRPKKmXtydhoXNhQ-MHiA6nS/pubhtml?gid=0&single=true");
-$textString = file_get_contents("https://spreadsheets.google.com/feeds/download/spreadsheets/Export?key=".$uevents[10]['ev_id']."&exportFormat=xlsx");
-
-//$dom = new Dom;
-//$dom->setOptions(["removeStyles" => true]);
-$dom->load($textString);
-$tr = $dom->find('tr');
-$count = count($tr);
-$xmlString = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<list xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-';
-for($i = 3; $i < $count; $i++){
-    $td = $tr[$i]->find("td");
-    if(count($td) == 16){
-        $title = $td[2]->innerHtml;
-        if($title == "") continue;
-        $title = preg_replace('/<[^>]*>/', '', $title);
-        $date = getTrDate($td[0]->innerHtml);
-        //$forLink = new Dom;
-        $forLink->loadStr($td[8]->innerHtml);
-        $findA = $forLink->find("a");
-        $imageDriveLink = $findA->innerHtml;
-        $split = explode("?id=", $imageDriveLink);
-        $id = $split[count($split) - 1];
-        $imageOrjLink = "https://drive.google.com/uc?export=view&id=".$id;
-    //    if(!file_exists($i."-".$id.".jpg"))copy($imageOrjLink, $i."-".$id.".jpg"); //copying images dir should be commented now
-        $xmlString .= "    <item>
-    <title>".$title."</title>
-    <image>".$i."-".$id.".jpg"."</image>
-    <description>".$date."</description>
-</item>
-";
+      $(".plus-carousel").slick({
+        dots: true,
+        infinite: true,
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        arrows:true,
+        responsive: [
+    {
+      breakpoint: 1440,
+      settings: {
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        infinite: true,
+        dots: true
+      }
+    },
+    {
+      breakpoint: 1200,
+      settings: {
+        slidesToShow: 2,
+        slidesToScroll: 1
+      }
+    },
+    {
+      breakpoint: 760,
+      settings: {
+        slidesToShow: 1,
+        slidesToScroll: 1
+      }
     }
-}
-/*$xmlString .= "</list>";
-$f = fopen("list.xml","w");
-fputs($f, $xmlString);
-fclose($f);*/
 
-?>
+  ]
+      });
+ 
+
+
+</script>
+
+
+</body>
+</html>

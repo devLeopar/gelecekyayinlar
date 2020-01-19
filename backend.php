@@ -89,13 +89,14 @@ if (count($results->getFiles()) == 0) {
         }
     }
 
-//sorting uevents as creation time of spreadsheets new first using spaceshift which is above php 7.xx
-// - uevents excelleri üretilen zamana göre sırala en son en başta ayrıca spaceshift karakteri(<=>) için php 7 ve üzeri olması gerek
+//check whether uevents has correct spreadsheets which has name of "Ssport Weekly xx Month ...."
+if(!empty($uevents)){
 
-usort($uevents,function($a,$b){return $b['file_createdTime']<=>$a['file_createdTime'];});
+
+    //sorting uevents as creation time of spreadsheets new first using spaceshift which is above php 7.xx
+    // - uevents excelleri üretilen zamana göre sırala en son en başta ayrıca spaceshift karakteri(<=>) için php 7 ve üzeri olması gerek
+    usort($uevents,function($a,$b){return $b['file_createdTime']<=>$a['file_createdTime'];});
     
-}
-
 
 /**
  * Get data from multiple spreadsheets on google drive
@@ -140,9 +141,9 @@ $sheet_fields = array(
 
 for($i = 0; $i < count($datasheets); $i++){
     foreach($datasheets[$i] as $row){
-        //check image url string has correct form
-        $image_url = $row['values'][8]['formattedValue']; //bu line'ı hiç resim yok ama diğer satırlar varsa hata veriyor bakıcam
-            if(isset($image_url) && strpos($image_url,'?id=') !== false ){
+        //check image url string has correct form(has ?id= part in url) and is not null or empty
+        $image_url = isset($row['values'][8]['formattedValue'])?$row['values'][8]['formattedValue']:""; 
+            if($image_url !== "" && strpos($image_url,'?id=') !== false ){
                 $image_id = explode('?id=',$image_url)[1];
                 $evNameTr = $row['values'][2]['formattedValue'];
                 $dateDMY =  $row['values'][0]['formattedValue'];
@@ -184,14 +185,87 @@ for($i = 0; $i < count($datasheets); $i++){
 
 $sheets = new \Google_Service_Sheets($client);
 
+/**
+ * Şimdiki gün ve aya göre doğru 2 sheeti belirleyip
+ * Onları döndüren fonksyion
+ * @return idz arrayi içinde tutuyor
+ */
+function determineId($file):array{
 
-//last created 2 spreadsheet ids - to sort them into correct order put previous and next (düzgün dizmek için önceki tarihte olanı başa al $uevents[1]['ev_id'] )
-// Buraya sadece 2 file seçmek için file isimlerinden haftaya dayalı seçim yapan fonksiyon yazabilirim
-$m_ids = array($uevents[2]['file_id'],$uevents[1]['file_id'],$uevents[0]['file_id']);
+    $idz = [];
+    $cYear = date("Y");
+    $nYear = $cYear + 1;
+    $cTime = strtotime(date("d M"));
+    $datecTime = date('d/m/Y - H:i',$cTime);
+    
+    for($i = 0; $i < count($file);$i++){
+        $filename = $file[$i]['file_name'];
+        $posly = strpos($filename,'ly');
+        $poshyp = strpos($filename,'-');
+        $fdateOne = substr($filename,$posly+2,$poshyp-($posly+2));
+        $fdateTwo = substr($filename,$poshyp+1);
+        preg_match('/[a-zA-Z]+/',$fdateOne,$matchOne);
+        preg_match('/[a-zA-Z]+/',$fdateTwo,$matchTwo);
+    
+        if(!empty($matchOne)){
+            //yıl geçişi haftası
+            if($matchOne[0] == 'Dec' && $matchTwo[0] == 'Jan'){
+                $min = strtotime($fdateOne.$cYear);
+                $max = strtotime($fdateTwo.$nYear);
+                }
+            else{
+                $min = strtotime($fdateOne.$cYear);
+                $max = strtotime($fdateTwo.$cYear);
+                }
+        }
+        else{
+            $min = strtotime($fdateOne.$matchTwo[0].$cYear);
+            $max = strtotime($fdateTwo.$cYear);
+        }
+    
+        // Eğer şuan gün hangi hafta arasına geliyor ise o ve ondan önceki (daha yeni) olan sheet id'yi al
+        if($min<=$cTime && $cTime<=$max){
+            if($i == 0){
+                array_push($idz,$file[$i]['file_id']);
+            break;
+            }
+            else{
+            array_push($idz,$file[$i]['file_id'],$file[$i-1]['file_id']);
+            break;
+            }
+    
+        }
+    
+    
+    }
+    
+    
+    return $idz;
+}
+
+
+
+$m_ids = determineId([$uevents[0],$uevents[1],$uevents[2]]);
 $data = getDataFromSheet($m_ids,$sheets);
 
 
 
 
 
-echo "finishe"; //should deleted
+
+
+} //end of if $uevents is not empty
+
+else{
+
+    printf("Ssport Weekly Spreadsheetleri bulunamadı,kontrol ediniz!");
+}
+
+
+
+
+} //end of else (so drive has spreadsheets)
+
+//echo "finishe"; //should deleted
+
+
