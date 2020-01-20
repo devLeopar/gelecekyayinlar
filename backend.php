@@ -144,7 +144,7 @@ for($i = 0; $i < count($datasheets); $i++){
         //check image url string has correct form(has ?id= part in url) and is not null or empty
         $image_url = isset($row['values'][8]['formattedValue'])?$row['values'][8]['formattedValue']:""; 
             if($image_url !== "" && strpos($image_url,'?id=') !== false ){
-                $image_id = explode('?id=',$image_url)[1];
+                $image_id = explode('?id=',$image_url)[1]; //bu satır altına performans için resimleri indir küçült ve wp->upload et ve url al diyebiliriz
                 $evNameTr = $row['values'][2]['formattedValue'];
                 $dateDMY =  $row['values'][0]['formattedValue'];
                 $dateClock = $row['values'][5]['formattedValue'];
@@ -248,8 +248,10 @@ function determineId($file):array{
 $m_ids = determineId([$uevents[0],$uevents[1],$uevents[2]]);
 $data = getDataFromSheet($m_ids,$sheets);
 
-
-
+//put data[] into data.php to further use in frontend.php
+$dataExp = var_export($data,true);
+$var = "<?php\n\n\$data = $dataExp;\n\n?>";
+file_put_contents('data.php', $var);
 
 
 

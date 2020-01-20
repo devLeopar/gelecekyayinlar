@@ -18,13 +18,13 @@
 <div class="plus-carousel-container">
     <div class="plus-carousel">
     <?php 
-    require 'backend.php';
+    include 'data.php';
     $carousel = "";
 
     foreach($data as $item){
     $carousel .= <<< EX
             <div class="carousel-container">
-                <a class="plus-image-link" href="#"><img class="plus-image" src="https://lh3.googleusercontent.com/d/{$item['imageId']}=s350?authuser=0"></a>
+                <a class="plus-image-link" href="#"><img class="plus-image" src="https://drive.google.com/uc?export=view&id={$item['imageId']}"></a>
                 <h3 class="plus-title">{$item['evNameTr']}</h3>
                 <p class="plus-date">{$item['date']}</p>
             </div>
