@@ -1,4 +1,5 @@
 <?php
+
 require __DIR__ . '/vendor/autoload.php';
 
 /*if (php_sapi_name() != 'cli') {
@@ -7,27 +8,50 @@ require __DIR__ . '/vendor/autoload.php';
 
 /* Above lines is required to make token.json via using cli - CLI kullanarak drive'a giriş yapılıp token.json oluşturulması için öncelikle CLI ile çağrılsın*/
 
+//these are file directories located in same plugin folder
+$credentials_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/credentials.json';
+$token_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/token.json';
+$data_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/data.php';
+
+
 /**
  * Returns an authorized API client.
  * @return Google_Client the authorized client object
  */
-function getClient()
+function getClient($cr_path,$tk_path)
 {
+    //these are absolute path of the files in this plugin directory
+    $credentials_path = $cr_path;
+    $token_path = $tk_path;
+
+    
     $client = new Google_Client();
     $client->setApplicationName('Google Drive API PHP Quickstart');
     $client->setScopes([Google_Service_Drive::DRIVE_METADATA_READONLY,\Google_Service_Sheets::SPREADSHEETS_READONLY]);
-    $client->setAuthConfig('credentials.json');
+    $client->setAuthConfig($credentials_path);
     $client->setAccessType('offline');
     $client->setPrompt('select_account consent');
+
     // Load previously authorized token from a file, if it exists.
     // The file token.json stores the user's access and refresh tokens, and is
     // created automatically when the authorization flow completes for the first
     // time.
-    $tokenPath = 'token.json';
+    $tokenPath = $token_path;
     if (file_exists($tokenPath)) {
         $accessToken = json_decode(file_get_contents($tokenPath), true);
         $client->setAccessToken($accessToken);
     }
+    /*else{ // sadece browser üzerinden çağırmak için deneme aslı(https://github.com/googleapis/google-api-php-client)
+        if (isset($_GET['code'])) {
+            $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
+            $client->setAccessToken($token);
+
+            if (!file_exists(dirname($tokenPath))) {
+                mkdir(dirname($tokenPath), 0700, true);
+            }
+            file_put_contents($tokenPath, json_encode($client->getAccessToken()));
+        }
+    }*/
     // If there is no previous token or it's expired.
     if ($client->isAccessTokenExpired()) {
         // Refresh the token if possible, else fetch a new one.
@@ -57,7 +81,7 @@ function getClient()
 }
 
 // Get the API client and construct the service object. /////////////
-$client = getClient(); 
+$client = getClient($credentials_path,$token_path); 
 $service = new Google_Service_Drive($client);
 /* Above 2 lines indicates successful data from the object formed with google client api */
 
@@ -158,9 +182,10 @@ for($i = 0; $i < count($datasheets); $i++){
                 if($date_dum>=$now){
                     if(!$strike){
                         $datas = array(
-                            'evNameTr' => $evNameTr,
-                            'date' => $exDateTr,
-                            'imageId' => $image_id,
+                            'evNameTr' => $evNameTr, // Event türkçe ismi
+                            'date' => $exDateTr, // 23 Ocak Perşembe - 15:30 formatında tarih 
+                            'imageId' => $image_id, // google drive resim id
+                            'time' => $date_dum,
                         );
                         //add required fields to the array
                         array_push($rqFields,$datas);
@@ -251,7 +276,7 @@ $data = getDataFromSheet($m_ids,$sheets);
 //put data[] into data.php to further use in frontend.php
 $dataExp = var_export($data,true);
 $var = "<?php\n\n\$data = $dataExp;\n\n?>";
-file_put_contents('data.php', $var);
+file_put_contents($data_path, $var);
 
 
 
@@ -268,6 +293,7 @@ else{
 
 } //end of else (so drive has spreadsheets)
 
-//echo "finishe"; //should deleted
+
+
 
 
