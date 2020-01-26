@@ -2,7 +2,7 @@
 
 
 /*
-Plugin Name: Plus Canli Yayınlar Extended Plus
+Plugin Name: Plus Canli Yayınlar Extended
 Plugin URI: https://www.google.com
 Description: Displaying events from G.Drive
 Version: 1.5

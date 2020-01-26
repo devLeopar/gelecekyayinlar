@@ -1,7 +1,10 @@
 <?php
 
-require __DIR__ . '/vendor/autoload.php';
+//direk browser üzerinden çağırabilmek için tüm wp fonksiyonları ile birlikte
+ require('C:\wamp64\www\mysite\wp-load.php');
 
+require __DIR__ . '/vendor/autoload.php';
+//define('WP_PLUGIN_DIR',"C:\wamp64\www\mysite\wp-content\plugins");
 /*if (php_sapi_name() != 'cli') {
     throw new Exception('This application must be run on the command line.');
 }*/
@@ -9,9 +12,15 @@ require __DIR__ . '/vendor/autoload.php';
 /* Above lines is required to make token.json via using cli - CLI kullanarak drive'a giriş yapılıp token.json oluşturulması için öncelikle CLI ile çağrılsın*/
 
 //these are file directories located in same plugin folder
-$credentials_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/credentials.json';
+/*$credentials_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/credentials.json';
 $token_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/token.json';
-$data_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/data.php';
+$data_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/data.php';*/
+
+$credentials_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus\credentials.json';
+$token_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus\token.json';
+$data_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus\data.php';
+
+
 
 
 /**
@@ -21,13 +30,16 @@ $data_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/data.php';
 function getClient($cr_path,$tk_path)
 {
     //these are absolute path of the files in this plugin directory
+    /*$credentials_path = $cr_path;
+    $token_path = $tk_path;*/
+
     $credentials_path = $cr_path;
     $token_path = $tk_path;
 
     
     $client = new Google_Client();
     $client->setApplicationName('Google Drive API PHP Quickstart');
-    $client->setScopes([Google_Service_Drive::DRIVE_METADATA_READONLY,\Google_Service_Sheets::SPREADSHEETS_READONLY]);
+    $client->setScopes([Google_Service_Drive::DRIVE,\Google_Service_Sheets::SPREADSHEETS_READONLY]);
     $client->setAuthConfig($credentials_path);
     $client->setAccessType('offline');
     $client->setPrompt('select_account consent');
@@ -103,7 +115,6 @@ if (count($results->getFiles()) == 0) {
     print "No files found.\n";
 } else {
     foreach ($results->getFiles() as $file) {
-        //printf("%s (%s) %s\n", $file->getName(), $file->getId(),$file->getCreatedTime()); //delete after use it
         $fname = $file->getName();
         $fid = $file->getId();
         $fCreatedTime = $file->getCreatedTime();
@@ -126,7 +137,7 @@ if(!empty($uevents)){
  * Get data from multiple spreadsheets on google drive
  * @return rqFields as required fileds Event Title,Event Data and Image Id
  */
-function getDataFromSheet($ids,$ssheet):array{
+function getDataFromSheet($ids,$ssheet,$service):array{
 
     $rqFields = [];
     $dateEn =['January','February','March','April','May','June','July','August','September','October','November','December',
@@ -168,40 +179,138 @@ for($i = 0; $i < count($datasheets); $i++){
         //check image url string has correct form(has ?id= part in url) and is not null or empty
         $image_url = isset($row['values'][8]['formattedValue'])?$row['values'][8]['formattedValue']:""; 
             if($image_url !== "" && strpos($image_url,'?id=') !== false ){
-                $image_id = explode('?id=',$image_url)[1]; //bu satır altına performans için resimleri indir küçült ve wp->upload et ve url al diyebiliriz
-                $evNameTr = $row['values'][2]['formattedValue'];
                 $dateDMY =  $row['values'][0]['formattedValue'];
                 $dateClock = $row['values'][5]['formattedValue'];
-                $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours'); //adding +3 hours to be GMT+3
+                $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours'); //adding +3 hours to be GMT+3 - burası dakikayı alamıyor 17:30 ise anladığım kadarıyla 17:00 veya 18:00 diye alıyor çalış
+                $strike = $row['values'][0]['effectiveFormat']['textFormat']['strikethrough'] || $row['values'][3]['effectiveFormat']['textFormat']['strikethrough'];
+                //check if events' time passed or not and strikethrough of it by Melida
+                if($date_dum>=$now && !$strike){
+                
+                $image_id = explode('?id=',$image_url)[1]; //bu satır altına performans için resimleri indir küçült ve wp->upload et ve url al diyebiliriz
+                
+                $downloaded_url = downloadFile($service,$image_id); //resimleri google drive v3'e göre indir
+                $media_image_link = add_image_to_wp($downloaded_url)[0]; //resimleri wordpress media upload et optimize edilecek inş.
+
+            
+
+
+
+                $evNameTr = $row['values'][2]['formattedValue'];
+
                 $excDateEn = date("d F l - H:i",$date_dum);
                 $exDateTr = str_replace($dateEn,$dateTr,$excDateEn);
                 //getting if event cancelled or not by looking strikethrough property set by Melida 
-                $strike = $row['values'][0]['effectiveFormat']['textFormat']['strikethrough'] || $row['values'][3]['effectiveFormat']['textFormat']['strikethrough'];
 
-                //check if events' time passed or not 
-                if($date_dum>=$now){
-                    if(!$strike){
+
+                
                         $datas = array(
                             'evNameTr' => $evNameTr, // Event türkçe ismi
                             'date' => $exDateTr, // 23 Ocak Perşembe - 15:30 formatında tarih 
                             'imageId' => $image_id, // google drive resim id
                             'time' => $date_dum,
+                            'image_local_url' => $media_image_link,
                         );
                         //add required fields to the array
                         array_push($rqFields,$datas);
-                    }
-                }
+                    
+                
 
-            }
+            } //eğer etkinlik zamanı geçmişse ve üzeri çizili ise end of if
 
-            
+        }
               
-}
-}
+} //end of foreach
+} //end of for
 
 
  return $rqFields;
 
+}
+/**
+ * download image from drive into folder
+ * using google drive api v3
+ * @return "../imajz/image.jpg" 
+ */
+
+function downloadFile($service,$file_id) {
+
+if(!file_exists(WP_PLUGIN_DIR . '/canliyayinlar-ssportplus/imajz/'.$file_id.".jpg")){
+    $content = $service->files->get($file_id, array("alt" => "media"));
+    $outHandle = fopen('./imajz/'.$file_id.".jpg", "w+");
+
+   /*while (!$content->getBody()->eof()) { disable 1024 bit writing - resimleri bozuyor
+        fwrite($outHandle, $content->getBody()->read(1024));
+}*/
+
+
+fwrite($outHandle, $content->getBody());
+
+// Close output file handle.
+
+fclose($outHandle);
+
+/*$editor = wp_get_image_editor('./imajz/'.$file_id.".jpg"); // burasına bakacağım resim resizing gerekli mi diye///////////////////
+if ( ! is_wp_error( $editor ) ) {
+    $result = $editor->resize( 500, null, false ); //width = 500, height = preserve aspect, false = do not crop
+}
+
+if (!is_wp_error($result)) 
+    $editor->save($editor->generate_filename());*//////////////////////////////////////////////
+
+    
+}
+return WP_PLUGIN_DIR . '/canliyayinlar-ssportplus/imajz/'.$file_id.".jpg";
+
+  }
+
+
+
+/**
+ * Upload media to wordpress library
+ * @return wp_get_attachment_image_src($attach_id) which is url of media being uploaded
+ *  */  
+
+function add_image_to_wp($link)
+{
+$image_url = $link;
+$filename = basename($image_url);
+$upload_dir = wp_upload_dir();
+$file_exist = file_exists($upload_dir['path'] . '/' . $filename);
+
+if($file_exist == false){
+
+
+$image_data = file_get_contents($image_url);
+
+
+if ( wp_mkdir_p( $upload_dir['path'] ) ) {
+  $file = $upload_dir['path'] . '/' . $filename;
+}
+else {
+  $file = $upload_dir['basedir'] . '/' . $filename;
+}
+
+file_put_contents( $file, $image_data );
+
+$wp_filetype = wp_check_filetype( $filename, null );
+
+$attachment = array(
+  'post_mime_type' => $wp_filetype['type'],
+  'post_title' => sanitize_file_name( $filename ),
+  'post_content' => '',
+  'post_status' => 'inherit'
+);
+
+$attach_id = wp_insert_attachment( $attachment, $file );
+require_once( ABSPATH . 'wp-admin/includes/image.php' );
+$attach_data = wp_generate_attachment_metadata( $attach_id, $file );
+wp_update_attachment_metadata( $attach_id, $attach_data );
+
+return wp_get_attachment_image_src($attach_id,'large'); //large size is enough for carousel now it can be thumbnail,medium,large,original 
+} //end if file is checked
+global $wpdb;
+    $image_id_wp = intval( $wpdb->get_var( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_value LIKE '%/$filename'" ) );
+    return wp_get_attachment_image_src($image_id_wp,'large'); 
 }
 
 /**
@@ -271,7 +380,7 @@ function determineId($file):array{
 
 
 $m_ids = determineId([$uevents[0],$uevents[1],$uevents[2]]);
-$data = getDataFromSheet($m_ids,$sheets);
+$data = getDataFromSheet($m_ids,$sheets,$service);
 
 //put data[] into data.php to further use in frontend.php
 $dataExp = var_export($data,true);

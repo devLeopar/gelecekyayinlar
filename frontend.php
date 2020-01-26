@@ -16,7 +16,7 @@ if(isset($data)){
         if($item['time']>=$simdi){
     $carousel .= <<< EX
             <div class="carousel-container">
-                <a class="plus-image-link" href="javascript:;"><img class="plus-image" src="https://drive.google.com/uc?export=view&id={$item['imageId']}"></a>
+                <a class="plus-image-link" href="javascript:;"><img class="plus-image" src="{$item['image_local_url']}"></a>
                 <h3 class="plus-title">{$item['evNameTr']}</h3>
                 <p class="plus-date">{$item['date']}</p>
             </div>
