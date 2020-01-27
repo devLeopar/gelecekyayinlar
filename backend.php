@@ -1,7 +1,9 @@
 <?php
 
 //direk browser üzerinden çağırabilmek için tüm wp fonksiyonları ile birlikte
- require('C:\wamp64\www\mysite\wp-load.php');
+//bunu wordpress ajax ekleyerekte yapabiliyoruz anladığım kadarıyla but dont know 
+require_once(dirname(dirname(dirname(__DIR__))) . '\wp-load.php'); //wordpress-ismi/wp-load.php wp yüklenmediği için wp global kullanamıyoruz.
+
 
 require __DIR__ . '/vendor/autoload.php';
 //define('WP_PLUGIN_DIR',"C:\wamp64\www\mysite\wp-content\plugins");
@@ -144,8 +146,8 @@ function getDataFromSheet($ids,$ssheet,$service):array{
                'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
     $dateTr =['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık',
                'Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar']; 
-               
-    $now = strtotime('now');
+              
+    $now = time() + 10800; // UTC olarak zamanı al ve +3 saat ekle(10800 saniye for GMT+3)
     $datasheets = [];
 
 
@@ -197,8 +199,9 @@ for($i = 0; $i < count($datasheets); $i++){
 
                 $evNameTr = $row['values'][2]['formattedValue'];
 
-                $excDateEn = date("d F l - H:i",$date_dum);
+                $excDateEn = date("j F l - H:i",$date_dum);
                 $exDateTr = str_replace($dateEn,$dateTr,$excDateEn);
+
                 //getting if event cancelled or not by looking strikethrough property set by Melida 
 
 

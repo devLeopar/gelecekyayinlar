@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 
 function upcoming_events(){
     global $data;
-    $simdi = strtotime('now');
+    $simdi = time() + 10800; // UTC olarak zamanı al ve +3 saat ekle(10800 saniye for GMT+3)
     $carousel = "";
 //start output buffering
 ob_start();    
@@ -17,7 +17,7 @@ if(isset($data)){
     $carousel .= <<< EX
             <div class="carousel-container">
                 <a class="plus-image-link" href="javascript:;"><img class="plus-image" src="{$item['image_local_url']}"></a>
-                <h3 class="plus-title">{$item['evNameTr']}</h3>
+                <h4 class="plus-title">{$item['evNameTr']}</h4>
                 <p class="plus-date">{$item['date']}</p>
             </div>
 EX;
