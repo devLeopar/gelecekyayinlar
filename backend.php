@@ -2,7 +2,7 @@
 
 //direk browser üzerinden çağırabilmek için tüm wp fonksiyonları ile birlikte
 //bunu wordpress ajax ekleyerekte yapabiliyoruz anladığım kadarıyla but dont know 
-require_once(dirname(dirname(dirname(__DIR__))) . '\wp-load.php'); //wordpress-ismi/wp-load.php wp yüklenmediği için wp global kullanamıyoruz.
+require_once(dirname(dirname(dirname(__DIR__))) . '/wp-load.php'); //wordpress-ismi/wp-load.php wp yüklenmediği için wp global kullanamıyoruz.
 
 
 require __DIR__ . '/vendor/autoload.php';
@@ -18,9 +18,9 @@ require __DIR__ . '/vendor/autoload.php';
 $token_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/token.json';
 $data_path = plugins_url(basename(dirname(dirname(__FILE__)))) .'/data.php';*/
 
-$credentials_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus\credentials.json';
-$token_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus\token.json';
-$data_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus\data.php';
+$credentials_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus/credentials.json';
+$token_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus/token.json';
+$data_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus/data.php';
 
 
 
@@ -74,9 +74,10 @@ function getClient($cr_path,$tk_path)
         } else {
             // Request authorization from the user.
             $authUrl = $client->createAuthUrl();
-            printf("Open the following link in your browser:\n%s\n", $authUrl);
-            print 'Enter verification code: ';
+            printf("Open the following link in your browser:\n%s\n", $authUrl); //burayı AWS putty'de CLI'ye basmıyor 
+            print 'Enter verification code: ';                                  //ilerde başka bir yöntem düşünülebilir belki
             $authCode = trim(fgets(STDIN));
+			//$authCode = '4/vwHDpqncBA1b0Yzu_q8Ar2i_IbxCzpy_0IrMrlZ6298j2WCO7NBTp_w'; //direk kodu yapıştırmayı denedik olmadı :)
             // Exchange authorization code for an access token.
             $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
             $client->setAccessToken($accessToken);
@@ -179,6 +180,7 @@ $sheet_fields = array(
 for($i = 0; $i < count($datasheets); $i++){
     foreach($datasheets[$i] as $row){
         //check image url string has correct form(has ?id= part in url) and is not null or empty
+        // Bu row[values] yerleri değişecek yeni sisteme geçince muhtemelen check et
         $image_url = isset($row['values'][8]['formattedValue'])?$row['values'][8]['formattedValue']:""; 
             if($image_url !== "" && strpos($image_url,'?id=') !== false ){
                 $dateDMY =  $row['values'][0]['formattedValue'];
@@ -187,16 +189,15 @@ for($i = 0; $i < count($datasheets); $i++){
                 $strike = $row['values'][0]['effectiveFormat']['textFormat']['strikethrough'] || $row['values'][3]['effectiveFormat']['textFormat']['strikethrough'];
                 //check if events' time passed or not and strikethrough of it by Melida
                 if($date_dum>=$now && !$strike){
-                
-                $image_id = explode('?id=',$image_url)[1]; //bu satır altına performans için resimleri indir küçült ve wp->upload et ve url al diyebiliriz
-                
-                $downloaded_url = downloadFile($service,$image_id); //resimleri google drive v3'e göre indir
-                $media_image_link = add_image_to_wp($downloaded_url)[0]; //resimleri wordpress media upload et optimize edilecek inş.
-
+                //bu satır altına performans için resimleri indir küçült ve wp->upload et ve url al diyebiliriz
+                //dedik bile :)
+                $image_id = explode('?id=',$image_url)[1]; 
+                //pass image ID and authorized service to get wordpress uploaded image URL
+                $media_image_link = G_drive_to_wordpress($image_id,$service); 
             
 
 
-
+                //event name al türkçe - ki bu [2] değişecek
                 $evNameTr = $row['values'][2]['formattedValue'];
 
                 $excDateEn = date("j F l - H:i",$date_dum);
@@ -229,92 +230,73 @@ for($i = 0; $i < count($datasheets); $i++){
  return $rqFields;
 
 }
+
+
 /**
- * download image from drive into folder
- * using google drive api v3
- * @return "../imajz/image.jpg" 
+ * Getting image content from Google drive
+ * Upload them into wordpress media library
+ * Highly optimized single function :) rather than 2
  */
-
-function downloadFile($service,$file_id) {
-
-if(!file_exists(WP_PLUGIN_DIR . '/canliyayinlar-ssportplus/imajz/'.$file_id.".jpg")){
-    $content = $service->files->get($file_id, array("alt" => "media"));
-    $outHandle = fopen('./imajz/'.$file_id.".jpg", "w+");
-
-   /*while (!$content->getBody()->eof()) { disable 1024 bit writing - resimleri bozuyor
-        fwrite($outHandle, $content->getBody()->read(1024));
-}*/
-
-
-fwrite($outHandle, $content->getBody());
-
-// Close output file handle.
-
-fclose($outHandle);
-
-/*$editor = wp_get_image_editor('./imajz/'.$file_id.".jpg"); // burasına bakacağım resim resizing gerekli mi diye///////////////////
-if ( ! is_wp_error( $editor ) ) {
-    $result = $editor->resize( 500, null, false ); //width = 500, height = preserve aspect, false = do not crop
-}
-
-if (!is_wp_error($result)) 
-    $editor->save($editor->generate_filename());*//////////////////////////////////////////////
-
-    
-}
-return WP_PLUGIN_DIR . '/canliyayinlar-ssportplus/imajz/'.$file_id.".jpg";
-
-  }
-
-
-
-/**
- * Upload media to wordpress library
- * @return wp_get_attachment_image_src($attach_id) which is url of media being uploaded
- *  */  
-
-function add_image_to_wp($link)
+function G_drive_to_wordpress($image_id,$service)
 {
-$image_url = $link;
-$filename = basename($image_url);
-$upload_dir = wp_upload_dir();
-$file_exist = file_exists($upload_dir['path'] . '/' . $filename);
+    $filename = $image_id .'.jpg';
+    $upload_dir = wp_upload_dir();
 
-if($file_exist == false){
+    //getting correct file location
+    //with proper permissions
+    if ( wp_mkdir_p( $upload_dir['path'] ) ) {
+        $file = $upload_dir['path'] . '/' . $filename;
+      }
+      else {
+        $file = $upload_dir['basedir'] . '/' . $filename;
+      }
 
-
-$image_data = file_get_contents($image_url);
-
-
-if ( wp_mkdir_p( $upload_dir['path'] ) ) {
-  $file = $upload_dir['path'] . '/' . $filename;
-}
-else {
-  $file = $upload_dir['basedir'] . '/' . $filename;
-}
-
-file_put_contents( $file, $image_data );
-
-$wp_filetype = wp_check_filetype( $filename, null );
-
+    $file_exist = file_exists($file);
+    $file_size = ($file_exist)?filesize($file):0; //check whether file found
+    //if file does not exist OR
+    //file exist but equal to 0 byte
+if(!$file_exist || $file_size == 0){
+    //getting content of G.Drive file with its ID 
+    $content = $service->files->get($image_id, array("alt" => "media"));
+    //getting actual image data
+    $image_data = $content->getBody();
+    //put this data into file which is on upload_dir
+    file_put_contents($file, $image_data);
+    //check file type based on its name
+    $wp_filetype = wp_check_filetype( $filename, null );
+//describe wordpress in which file will be uploaded
 $attachment = array(
   'post_mime_type' => $wp_filetype['type'],
   'post_title' => sanitize_file_name( $filename ),
   'post_content' => '',
   'post_status' => 'inherit'
 );
-
+//creating attachment id
 $attach_id = wp_insert_attachment( $attachment, $file );
+//requiring image.php to work with generate attachment things
 require_once( ABSPATH . 'wp-admin/includes/image.php' );
+// generate post(type=image) based on id,attachment(specs) to $file
 $attach_data = wp_generate_attachment_metadata( $attach_id, $file );
+//adding metadata to this image based on its id
 wp_update_attachment_metadata( $attach_id, $attach_data );
+//getting image(large) url [this can be thumbnail,medium,large,original and those values can be arranged into wp-admin/settings/media]
+$image_url = wp_get_attachment_image_src($attach_id,'large')[0]; // at 0 position url 1 and 2 its sizes etc
 
-return wp_get_attachment_image_src($attach_id,'large'); //large size is enough for carousel now it can be thumbnail,medium,large,original 
-} //end if file is checked
-global $wpdb;
-    $image_id_wp = intval( $wpdb->get_var( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_value LIKE '%/$filename'" ) );
-    return wp_get_attachment_image_src($image_id_wp,'large'); 
+return $image_url;
+} //end of if(file exist or file size = 0 byte)
+
+//if file exist and size is not equal to 0
+else{
+global $wpdb; //getting already connected wordpress database
+// search in filename into database to get those image id
+$image_id_wp = intval( $wpdb->get_var( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_value LIKE '%/$filename'" ) );
+// get those large image url based on its id
+$image_url = wp_get_attachment_image_src($image_id_wp,'large')[0];
+return $image_url;
 }
+
+}//end of junction
+
 
 /**
  * getting values from spreadsheets into an array for front-end usage

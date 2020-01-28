@@ -1,7 +1,8 @@
 <?php
 //include plugins_url(basename(dirname(dirname(__FILE__)))) .'/data.php';
-include 'data.php';
+
 if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+include 'data.php';
 
 function upcoming_events(){
     global $data;
@@ -37,9 +38,5 @@ return $content;
 
 }
 
-add_shortcode('plus_events','upcoming_events');
-
+//add_shortcode('plus_events','upcoming_events');
 ?>
-  
-
-
