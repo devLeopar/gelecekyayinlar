@@ -185,7 +185,13 @@ for($i = 0; $i < count($datasheets); $i++){
             if($image_url !== "" && strpos($image_url,'?id=') !== false ){
                 $dateDMY =  $row['values'][0]['formattedValue'];
                 $dateClock = $row['values'][5]['formattedValue'];
-                $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours'); //adding +3 hours to be GMT+3 - burası dakikayı alamıyor 17:30 ise anladığım kadarıyla 17:00 veya 18:00 diye alıyor çalış
+                
+                if( $dateClock === '00:00:00'){
+                $date_dum = strtotime($dateDMY.' '.$dateClock. '+27 hours'); //27 saat eklendi çünkü 00 zaman geçişi excel'de bir önceki günün başı gibi kabul ediliyor.
+                }
+                else{
+                $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours'); //adding +3 hours to be GMT+3 
+                }
                 $strike = $row['values'][0]['effectiveFormat']['textFormat']['strikethrough'] || $row['values'][3]['effectiveFormat']['textFormat']['strikethrough'];
                 //check if events' time passed or not and strikethrough of it by Melida
                 if($date_dum>=$now && !$strike){

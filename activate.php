@@ -9,7 +9,7 @@ Author URI: https://www.google.com
 License: Licensed under GPLv2
 */
 
-//if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
 //require_once(dirname(dirname(dirname(__DIR__))) . '/wp-load.php');
 
 include_once(__DIR__ .'/frontend.php');
