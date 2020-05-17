@@ -25,6 +25,8 @@ $data_path = WP_PLUGIN_DIR. '/canliyayinlar-ssportplus/data.php';
 
 
 
+
+
 /**
  * Returns an authorized API client.
  * @return Google_Client the authorized client object
@@ -122,7 +124,7 @@ if (count($results->getFiles()) == 0) {
         $fid = $file->getId();
         $fCreatedTime = $file->getCreatedTime();
         //get only Ssport Weekly spreadsheets on google drive
-        if(stripos($fname,"weekly")>0 && stripos($fname,"sport")>0){
+        if(stripos($fname,"hafta")>0 && stripos($fname,"sport")>0){
             array_push($uevents,["file_name"=>$fname,"file_id"=>$fid,"file_createdTime"=>$fCreatedTime]);
         }
     }
@@ -143,18 +145,20 @@ if(!empty($uevents)){
 function getDataFromSheet($ids,$ssheet,$service):array{
 
     $rqFields = [];
-    $dateEn =['January','February','March','April','May','June','July','August','September','October','November','December',
-               'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-    $dateTr =['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık',
-               'Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar']; 
+
               
     $now = time() + 10800; // UTC olarak zamanı al ve +3 saat ekle(10800 saniye for GMT+3)
     $datasheets = [];
+        //Global Turkish-English Data Changers
+    $dateEn =['January','February','March','April','May','June','July','August','September','October','November','December',
+    'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    $dateTr =['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık',
+    'Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar']; 
 
 
 
 //getting only row values formatted value and effective value because of speed//////////////////////////////////////////////
-$range = 'A2:I'; //the range until image row
+$range = 'A2:K'; //the range until image row - yeni sistemde K sütun Görseller başlığı altında
 $sheet_fields = array(
     'fields'=> 'properties(title),sheets(data(rowData(values(formattedValue,effectiveFormat(textFormat)))))',
     'ranges' => $range,
@@ -181,20 +185,32 @@ for($i = 0; $i < count($datasheets); $i++){
     foreach($datasheets[$i] as $row){
         //check image url string has correct form(has ?id= part in url) and is not null or empty
         // Bu row[values] yerleri değişecek yeni sisteme geçince muhtemelen check et
-        $image_url = isset($row['values'][8]['formattedValue'])?$row['values'][8]['formattedValue']:""; 
+        $image_url = isset($row['values'][10]['formattedValue'])?$row['values'][10]['formattedValue']:""; 
             if($image_url !== "" && strpos($image_url,'?id=') !== false ){
                 $dateDMY =  $row['values'][0]['formattedValue'];
-                $dateClock = $row['values'][5]['formattedValue'];
-                
-                if( $dateClock === '00:00:00'){
+                $dateClock = $row['values'][3]['formattedValue']; //Yeni sistem D sütunu
+
+                $dateDMY_changed = str_replace($dateTr,$dateEn,$dateDMY);
+                $dateDMY_changed = explode(' ',$dateDMY_changed);
+                $cur_Y = date("Y");
+                $dateDMY_EN = "$dateDMY_changed[0]" . " " . "$dateDMY_changed[1]" ." $cur_Y";
+
+                $date_dum = strtotime( $dateDMY_EN.' '.$dateClock );
+
+
+                /*if( $dateClock === '00:00:00'){
                 $date_dum = strtotime($dateDMY.' '.$dateClock. '+27 hours'); //27 saat eklendi çünkü 00 zaman geçişi excel'de bir önceki günün başı gibi kabul ediliyor.
                 }
                 else{
                 $date_dum = strtotime($dateDMY.' '.$dateClock. '+3 hours'); //adding +3 hours to be GMT+3 
-                }
+                }*/
+
                 $strike = $row['values'][0]['effectiveFormat']['textFormat']['strikethrough'] || $row['values'][3]['effectiveFormat']['textFormat']['strikethrough'];
                 //check if events' time passed or not and strikethrough of it by Melida
-                if($date_dum>=$now && !$strike){
+
+                if($date_dum>=$now && !$strike){  // Bunu aç aslında
+                //if(!$strike){
+
                 //bu satır altına performans için resimleri indir küçült ve wp->upload et ve url al diyebiliriz
                 //dedik bile :)
                 $image_id = explode('?id=',$image_url)[1]; 
@@ -204,7 +220,7 @@ for($i = 0; $i < count($datasheets); $i++){
 
 
                 //event name al türkçe - ki bu [2] değişecek
-                $evNameTr = $row['values'][2]['formattedValue'];
+                $evNameTr = $row['values'][1]['formattedValue'];
 
                 $excDateEn = date("j F l - H:i",$date_dum);
                 $exDateTr = str_replace($dateEn,$dateTr,$excDateEn);
@@ -325,7 +341,7 @@ function determineId($file):array{
     
     for($i = 0; $i < count($file);$i++){
         $filename = $file[$i]['file_name'];
-        $posly = strpos($filename,'ly');
+        $posly = strpos($filename,'ık');
         $poshyp = strpos($filename,'-');
         $fdateOne = substr($filename,$posly+2,$poshyp-($posly+2));
         $fdateTwo = substr($filename,$poshyp+1);
@@ -370,7 +386,9 @@ function determineId($file):array{
 
 
 
-$m_ids = determineId([$uevents[0],$uevents[1],$uevents[2]]);
+//$m_ids = determineId([$uevents[0],$uevents[1],$uevents[2]]); // 3 Sheet döndürsün fuck it
+
+$m_ids = [$uevents[0]['file_id'],$uevents[1]['file_id'],$uevents[2]['file_id']];
 $data = getDataFromSheet($m_ids,$sheets,$service);
 
 //put data[] into data.php to further use in frontend.php
