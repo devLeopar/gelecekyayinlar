@@ -390,6 +390,7 @@ function determineId($file):array{
 
 $m_ids = [$uevents[0]['file_id'],$uevents[1]['file_id'],$uevents[2]['file_id']];
 $data = getDataFromSheet($m_ids,$sheets,$service);
+usort($data,function($a,$b){return $a['time']<=>$b['time'];}); //sort data array as event dates
 
 //put data[] into data.php to further use in frontend.php
 $dataExp = var_export($data,true);
