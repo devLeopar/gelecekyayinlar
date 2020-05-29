@@ -17,7 +17,7 @@ if(isset($data)){
         if($item['time']>=$simdi){
     $carousel .= <<< EX
             <div class="carousel-container">
-                <a class="plus-image-link" href="https://app.ssportplus.com/signup?utm_source=ssportplus&utm_medium=canliyayinlar-carousel&utm_campaign=gelecek-canli-yayinlar"><img class="plus-image" data-lazy="{$item['image_local_url']}"></a>
+                <a class="plus-image-link" href="https://app.ssportplus.com/account/signup?utm_source=ssportplus&utm_medium=canliyayinlar-carousel&utm_campaign=gelecek-canli-yayinlar"><img class="plus-image" data-lazy="{$item['image_local_url']}"></a>
                 <h4 class="plus-title">{$item['evNameTr']}</h4>
                 <p class="plus-date">{$item['date']}</p>
             </div>
