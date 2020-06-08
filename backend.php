@@ -186,7 +186,15 @@ for($i = 0; $i < count($datasheets); $i++){
         //check image url string has correct form(has ?id= part in url) and is not null or empty
         // Bu row[values] yerleri değişecek yeni sisteme geçince muhtemelen check et
         $image_url = isset($row['values'][10]['formattedValue'])?$row['values'][10]['formattedValue']:""; 
-            if($image_url !== "" && strpos($image_url,'?id=') !== false ){
+            if($image_url !== ""){
+				if( strpos($image_url,'?id=') !== false ){
+				
+				$image_id = explode('?id=',$image_url)[1];
+				}
+				elseif( strpos($image_url,'file/d/') !== false ){
+					$image_id = explode( '/', $image_url )[5];
+				}
+				
                 $dateDMY =  $row['values'][0]['formattedValue'];
                 $dateClock = $row['values'][3]['formattedValue']; //Yeni sistem D sütunu
 
@@ -213,7 +221,7 @@ for($i = 0; $i < count($datasheets); $i++){
 
                 //bu satır altına performans için resimleri indir küçült ve wp->upload et ve url al diyebiliriz
                 //dedik bile :)
-                $image_id = explode('?id=',$image_url)[1]; 
+                 
                 //pass image ID and authorized service to get wordpress uploaded image URL
                 $media_image_link = G_drive_to_wordpress($image_id,$service); 
             
@@ -242,8 +250,10 @@ for($i = 0; $i < count($datasheets); $i++){
                 
 
             } //eğer etkinlik zamanı geçmişse ve üzeri çizili ise end of if
+			
+			
 
-        }
+        } // End image if
               
 } //end of foreach
 } //end of for
